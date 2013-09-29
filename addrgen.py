@@ -5,6 +5,7 @@ import hashlib
 import ctypes
 import ctypes.util
 import sys
+import base64
 
 ssl = ctypes.cdll.LoadLibrary (ctypes.util.find_library ('ssl') or 'libeay32')
 
@@ -144,6 +145,7 @@ def gen_eckey(passphrase=None, secret=None, pkey=None, compressed=False, rounds=
 
 def get_addr(k,version=0):
     pubkey = k.get_pubkey()
+    print base64.b64encode(pubkey)
     secret = k.get_secret()
     hash160 = rhash(pubkey)
     addr = base58_check_encode(hash160,version)
@@ -159,6 +161,21 @@ def reencode(pkey,version=0):
     payload = secret + chr(1)
     pkey = base58_check_encode(payload, 128+version)
     print get_addr(gen_eckey(pkey))
+
+#Simple function for verifying (pubkey, address) pair.
+def validate_pubkey(version = 0):
+    pubkey = raw_input("Enter the Base64 encoded public key:\n>")
+    if not len(pubkey) == 44:
+        print 'Public key input is not recognized. Please try again with the correct public key.'
+        return
+    addr_input = raw_input("Enter the bitcoin address for which you need to validate the public key:\n>")
+    pubkey = base64.b64decode(pubkey)
+    hash160 = rhash(pubkey)
+    addr = base58_check_encode(hash160,version)
+    if addr == addr_input:
+        print 'Given public key is valid for the given address!'
+    else:
+        print 'Given public key and address do not match!'
 
 def test(otherversion):
     # random compressed
@@ -184,5 +201,7 @@ if __name__ == '__main__':
     parser.add_option("--otherversion", dest="otherversion", default=0,
                     help="Generate address with different version number")
     (options, args) = parser.parse_args()
- 
-    test(int(options.otherversion))
+    if args == []:
+        test(int(options.otherversion))
+    elif args[0] == 'v':
+        validate_pubkey()
